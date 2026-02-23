@@ -1,10 +1,33 @@
 package com.example.identity_service.service;
 
 import com.example.identity_service.dto.request.AuthRequest;
+import com.example.identity_service.dto.request.IntrospectRequest;
+import com.example.identity_service.dto.response.AuthResponse;
+import com.example.identity_service.dto.response.IntrospectResponse;
 import com.example.identity_service.exception.AppException;
 import com.example.identity_service.exception.ErrorCode;
 import com.example.identity_service.repository.UserRepository;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSObject;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.NonFinal;
+
+import java.text.ParseException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -14,10 +37,64 @@ import org.springframework.stereotype.Service;
 public class AuthenticationService {
     private final UserRepository userRepository;
 
-    public boolean authenticate(AuthRequest authRequest) {
-        var user = userRepository.findByUsername(authRequest.getUsername()).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    @NonFinal
+    @Value("${jwt.signerKey}")
+    protected String SIGNER_KEY;
+
+    public IntrospectResponse intrspect(IntrospectRequest request) throws JOSEException, ParseException {
+        var token = request.getToken();
+
+        JWSVerifier verifier = new MACVerifier(SIGNER_KEY.getBytes());
+
+        SignedJWT signedJWT = SignedJWT.parse(token);
+
+        Date expiredTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+
+        var verified = signedJWT.verify(verifier);
+
+        return IntrospectResponse.builder()
+                .valid(verified && expiredTime.after(new Date()))
+                .build();
+    }
+
+    public AuthResponse authenticate(AuthRequest authRequest) {
+        var user = userRepository.findByUsername(authRequest.getUsername())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        return  passwordEncoder.matches(authRequest.getPassword(), user.getPassword());
+        boolean authenticated = passwordEncoder.matches(authRequest.getPassword(), user.getPassword());
+
+        if (!authenticated) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        var token = generateToken(authRequest.getUsername());
+
+        return AuthResponse.builder().token(token).authenticated(true).build();
+    }
+
+    private String generateToken(String username) {
+        JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
+
+        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
+                .subject(username)
+                .issuer("devi.com")
+                .issueTime(new Date())
+                .expirationTime(new Date(
+                        Instant.now().plus(1, ChronoUnit.HOURS).toEpochMilli()))
+                .claim("custom", "hiihhi")
+                .build();
+
+        Payload payload = new Payload(jwtClaimsSet.toJSONObject());
+
+        JWSObject jwsObject = new JWSObject(header, payload);
+
+        try {
+            jwsObject.sign(new MACSigner(SIGNER_KEY.getBytes()));
+            return jwsObject.serialize();
+        } catch (JOSEException e) {
+            // log.error("Can not create token", e);
+            throw new RuntimeException();
+        }
     }
 }
