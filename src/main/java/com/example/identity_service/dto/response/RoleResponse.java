@@ -1,16 +1,20 @@
 package com.example.identity_service.dto.response;
 
+import com.example.identity_service.entity.Permission;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Set;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class PermissionResponse {
+public class RoleResponse {
 
     private String name;
     private String description;
+    private Set<PermissionResponse> permissions;
 }

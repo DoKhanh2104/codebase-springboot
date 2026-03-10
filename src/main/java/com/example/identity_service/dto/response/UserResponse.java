@@ -1,5 +1,6 @@
 package com.example.identity_service.dto.response;
 
+import com.example.identity_service.entity.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,5 +22,5 @@ public class UserResponse {
     private String firstName;
     private String lastName;
     private LocalDate birthDate;
-    private Set<String> roles;
+    private Set<Role> roles;
 }
