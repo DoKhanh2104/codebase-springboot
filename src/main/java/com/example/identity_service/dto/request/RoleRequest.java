@@ -1,11 +1,10 @@
 package com.example.identity_service.dto.request;
 
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Set;
 
 @Data
 @AllArgsConstructor
@@ -13,7 +12,7 @@ import java.util.Set;
 @Builder
 public class RoleRequest {
 
-    private String name;
-    private String description;
-    private Set<String> permissions;
+  private String name;
+  private String description;
+  private Set<String> permissions;
 }

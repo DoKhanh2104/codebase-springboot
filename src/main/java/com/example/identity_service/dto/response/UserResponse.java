@@ -1,14 +1,12 @@
 package com.example.identity_service.dto.response;
 
-import com.example.identity_service.entity.Role;
+import java.time.LocalDate;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDate;
-import java.util.Set;
 
 @Getter
 @Setter
@@ -17,10 +15,10 @@ import java.util.Set;
 @AllArgsConstructor
 public class UserResponse {
 
-    private String id;
-    private String username;
-    private String firstName;
-    private String lastName;
-    private LocalDate birthDate;
-    private Set<Role> roles;
+  private String id;
+  private String username;
+  private String firstName;
+  private String lastName;
+  private LocalDate birthDate;
+  private Set<RoleResponse> roles;
 }
